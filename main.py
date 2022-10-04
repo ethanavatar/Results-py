@@ -1,8 +1,11 @@
-from results import Result, Ok, Err
+from __future__ import annotations
+import typing as t
+from results import Ok, Err, Result, UnwrapError
 
-def main():
-    res = Err(1)
-    print(res.unwrap())
+def divide_checked(dividend: int, divisor: int) -> Result[int, str]:
+    if divisor == 0:
+        return Err("Cannot divide by zero")
+    return Ok(dividend / divisor)
 
-if __name__ == '__main__':
-    main()
+assert divide_checked(4, 2).unwrap_or(0) == 2
+assert divide_checked(1, 0).unwrap_or(-42) == -42
