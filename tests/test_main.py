@@ -64,7 +64,7 @@ def test_and_then(first: Result, expected: Result):
     checked_multiply: t.Callable[[ctypes.c_uint32, ctypes.c_uint32], Result[ctypes.c_uint32]] = lambda x, y: Ok(x * y) if x * y < 4294967295 else Err(x * y)
     sq_then_to_str: t.Callable[[ctypes.c_uint32], str] = lambda x: Ok(str(checked_multiply(x, x).unwrap())) if checked_multiply(x, x).is_ok() else Err("overflowed")
 
-    assert first.And_then(sq_then_to_str) == expected
+    assert first.AndThen(sq_then_to_str) == expected
 
 @pytest.mark.parametrize("first, second, expected", [
     (Ok(2), Err("late error"), Ok(2)),
@@ -85,7 +85,7 @@ err = lambda x: Err(x)
     (Err(3), err, err, Err(3)),
 ])
 def test_or_else(first: Result, fn1: Result, fn2: Result, expected: Result):
-    assert first.Or_else(fn1).Or_else(fn2) == expected
+    assert first.OrElse(fn1).OrElse(fn2) == expected
 
 @pytest.mark.parametrize("first, expected", [
     (Ok(9).unwrap_or(2), 9),

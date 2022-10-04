@@ -1,7 +1,7 @@
-from results import Result
+from results import Result, Ok, Err
 
 def main():
-    res = Result.Err(1)
+    res = Err(1)
     print(res.unwrap())
 
 if __name__ == '__main__':

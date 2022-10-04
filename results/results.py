@@ -1,109 +1,126 @@
 from __future__ import annotations
 import typing as t
 
+from dataclasses import dataclass
+
 class UnwrapError(Exception):
     pass
 
-class _Result:
-    def __init__(self, value: t.Any, is_ok: bool):
-        self._value = value
+class Result:
+    pass
 
-        self._ok = is_ok
+
+T = t.TypeVar('T') # Result type
+U = t.TypeVar('U') # Ok function result type
+F = t.TypeVar('F') # Err function result type
+E = t.TypeVar('E') # Error type
+@dataclass
+class Ok(Result):
+    value: T
 
     def is_ok(self) -> bool:
-        return self._ok
+        return True
 
     def is_err(self) -> bool:
-        return not self._ok
+        return False
 
-    def expect_err(self, msg: str) -> t.Any:
-        if self.is_ok():
-            raise UnwrapError(msg)
-        else:
-            return self._value
+    def expect(self, msg: str) -> T:
+        return self.value
 
-    def expect(self, msg: str) -> t.Any:
-        if self.is_ok():
-            return self._value
-        else:
-            raise UnwrapError(msg)
+    def expect_err(self, msg: str) -> None:
+        raise UnwrapError(msg)
 
-    def unwrap(self) -> t.Any:
-        if self.is_ok():
-            return self._value
-        else:
-            raise UnwrapError(f"unwrap called on Err: {self._value}")
+    def unwrap(self) -> T:
+        return self.value
 
-    def unwrap_err(self) -> t.Any:
-        if self.is_ok():
-            raise UnwrapError(f"unwrap_err called on Ok: {self._value}")
-        else:
-            return self._value
+    def unwrap_err(self) -> None:
+        raise UnwrapError('called `Result::unwrap_err()` on an `Ok` value')
 
-    def unwrap_unchecked(self) -> t.Any:
-        return self._value
+    def unwrap_or(self, default: T) -> T:
+        return self.value
+
+    def unwrap_or_else(self, f: t.Callable[[], T]) -> T:
+        return self.value
+
+    def unwrap_unchecked(self) -> T:
+        return self.value
 
     def And(self, res: Result) -> Result:
-        if self.is_ok():
-            if res.is_ok():
-                return res
-            else:
-                return Err(res._value)
-        else:
-            return self
+        return res
 
-    def And_then(self, op: t.Callable[[t.Any], Result]) -> Result:
-        if self.is_ok():
-            return op(self._value)
-        else:
-            return self
+    def AndThen(self, f: t.Callable[[T], Result]) -> Result:
+        return f(self.value)
 
     def Or(self, res: Result) -> Result:
-        if self.is_ok():
-            return self
-        else:
-            return res
+        return self
 
-    def Or_else(self, op: t.Callable[[t.Any], Result]) -> Result:
-        if self.is_ok():
-            return self
-        else:
-            return op(self._value)
+    def OrElse(self, f: t.Callable[[], Result]) -> Result:
+        return self
 
-    def unwrap_or(self, default: t.Any) -> t.Any:
-        if self.is_ok():
-            return self._value
-        else:
-            return default
+    def Map(self, f: t.Callable[[T], U]) -> Result[U]:
+        return Ok(f(self.value))
 
-    def unwrap_or_else(self, op: t.Callable[[t.Any], t.Any]) -> t.Any:
-        if self.is_ok():
-            return self._value
-        else:
-            return op(self._value)
+    def MapErr(self, f: t.Callable[[E], F]) -> Result[T]:
+        return self
 
-class Ok(_Result):
-    def __init__(self, value: t.Any):
-        super().__init__(value, True)
 
-    def __eq__(self, other: t.Any) -> bool:
-        if isinstance(other, Ok):
-            return self._value == other._value
-        else:
-            return False
+T = t.TypeVar('T') # Result type
+U = t.TypeVar('U') # Ok function result type
+F = t.TypeVar('F') # Err function result type
+E = t.TypeVar('E') # Error type
+@dataclass
+class Err(Result):
+    error: t.Any
 
-    def __repr__(self) -> str:
-        return f"Ok({self._value})"
+    def is_err(self) -> bool:
+        return True
 
-class Err(_Result):
-    def __init__(self, value: t.Any):
-        super().__init__(value, False)
+    def is_ok(self) -> bool:
+        return False
 
-    def __eq__(self, other: t.Any) -> bool:
-        if isinstance(other, Err):
-            return self._value == other._value
-        else:
-            return False
+    def expect(self, msg: str) -> T:
+        raise UnwrapError(msg)
 
-    def __repr__(self) -> str:
-        return f"Err({self._value})"
+    def expect_err(self, msg: str) -> E:
+        return self.error
+
+    def unwrap(self) -> T:
+        raise UnwrapError(f"called `Result::unwrap()` on an `Err` value: {self.error}")
+
+    def unwrap_err(self) -> E:
+        return self.error
+
+    def unwrap_or(self, default: T) -> T:
+        return default
+
+    def unwrap_or_else(self, f: t.Callable[[], T]) -> T:
+        return f(self.error)
+
+    def unwrap_unchecked(self) -> T:
+        return self.error
+
+    def And(self, res: Result) -> Result:
+        return self
+
+    def AndThen(self, f: t.Callable[[T], Result]) -> Result:
+        return self
+
+    def Or(self, res: Result) -> Result:
+        return res
+
+    def OrElse(self, f: t.Callable[[], Result]) -> Result:
+        return f(self.error)
+
+    def Map(self, f: t.Callable[[T], U]) -> Result[U]:
+        return self
+
+    def MapErr(self, f: t.Callable[[E], F]) -> Result[T]:
+        return Err(f(self.error))
+
+T = t.TypeVar('T') # Result type
+def ok(value: T) -> Result[T]:
+    return Ok(value)
+
+E = t.TypeVar('E') # Error type
+def err(error: E) -> Result[E]:
+    return Err(error)
